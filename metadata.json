@@ -1,0 +1,6 @@
+{
+  "name": "SOC-X: Enterprise Security Operations & Incident Response Platform",
+  "description": "An enterprise-grade Security Operations Center (SOC) and Incident Response platform featuring real-time threat telemetry, automated correlation engine, MITRE ATT&CK mapping, and active response playbooks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
