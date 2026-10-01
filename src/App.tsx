@@ -156,7 +156,14 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         showToast(data.message);
-        fetchData();
+        await fetchData();
+        if (scenario === 'chain-attack') {
+          setActiveTab('incidents');
+        } else {
+          setActiveTab('alerts');
+        }
+      } else {
+        showToast(data.error || 'Simulation execution failed.');
       }
     } catch (err) {
       showToast('Simulation execution failed.');
