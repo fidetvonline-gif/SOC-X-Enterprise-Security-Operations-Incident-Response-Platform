@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
@@ -565,12 +566,19 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  const vite = await createViteServer({
-    server: { middlewareMode: true, hmr: false }
-  });
-
-  app.use(vite.middlewares);
+  // Production static serving or Vite middleware
+  const distPath = path.resolve(__dirname, 'dist');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
+    const vite = await createViteServer({
+      server: { middlewareMode: true, hmr: false }
+    });
+    app.use(vite.middlewares);
+  }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`SOC-X backend server running on http://0.0.0.0:${PORT}`);
